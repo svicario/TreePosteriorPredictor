@@ -52,8 +52,13 @@ def GuessingModelfromHeader(Header,Model,partitionPlan,mrbayes=True):
                 if last=="Tree":
                     if SingleTree:
                         temp[last]="@{prefix}.run{nrun}.t_pos"+str(k_items[0][0])+"@"
+                        if not mrbayes:
+                            temp[last]="@ExaBayes_topologies.{prefix}.{nrun}_pos"+str(k_items[0][0])+"@"
                     else:
                         temp[last]="@{prefix}.tree"+str(Tree_dict[k_items[0][0]])+".run{nrun}.t_pos"+str(Tree_dict[k_items[0][0]])+"@"
+                        if not mrbayes:
+                            temp[last]="@ExaBayes.run{nrun}.tree"+str(Tree_dict[k_items[0][0]])+".t_pos"+str(Tree_dict[k_items[0][0]])+"@"
+                            
                 elif last=="values":
                     temp[last]=[]
                     temp["names"]=[]
@@ -135,12 +140,12 @@ def GettingInfoFromInput(NexusInput):
 
     return Model,partitionPlan, int(nruns)
 
-def GettingInfoFromInputExa():
+def GettingInfoFromInputExa(prefix):
     ##Getting all files that we need
     import os
     ll=os.listdir("./")
     #I assume that there are only one info file
-    info=[x for x in ll if x.lower().find("exabayes_info")>-1][0]
+    info=[x for x in ll if x.lower().find("exabayes_info."+prefix.lower())>-1][0]
     handle=open(info,"r")
     print "InfoFile",info
     RR=handle.readlines()
@@ -267,14 +272,20 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
         Model,partitionPlan,nruns=GettingInfoFromInput(NexusInput)
     else:
         print "I assume it is ExaBayes"
-        Model,partitionPlan,nruns=GettingInfoFromInputExa()
+        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix)
         if not prefix:
             prefix="ExaBayes"
     JSONone={"FixedParameters":Model,"VariableParameters":[]}
     for p in range(nruns):
         if mrbayes:
             p+=1
-        phandle=open(prefix+".run"+str(p)+".p","r")
+        try:
+            phandle=open(prefix+".run"+str(p)+".p","r")
+        except IOError:
+            try:
+                phandle=open("Exabayes_parameters."+prefix+"."+str(p)+".p","r")
+            except IOError:
+                phandle=open("Exabayes.run"+str(p)+".p","r")
         while 1:
             line=phandle.readline()
             if line.find("Gen")==0: break
@@ -289,16 +300,16 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
         tfile={}
         for part in place:
             place[part]["Tree"]=place[part]["Tree"].format(nrun=p, prefix=prefix)
-            try:
-                handle=open(place[part]["Tree"][1:-1].split("_pos")[0],"r")
-            except IOError:
-                treename=place[part]["Tree"][1:-1].split("_pos")[0]
-                treename=treename.split(".")
-                #ExaBayes have the run and tree part inverted compared to mrbayes
-                #here I assume that error happen only when there are more than one tree
-                treename=".".join([".".join(treename[:-3]),treename[-2],treename[-3],treename[-1]])
-                handle=open(treename,"r")
-                
+            handle=open(place[part]["Tree"][1:-1].split("_pos")[0],"r")
+##            try:
+##                handle=open(place[part]["Tree"][1:-1].split("_pos")[0],"r")
+##            except IOError:
+##                treename=place[part]["Tree"][1:-1].split("_pos")[0]
+##                treename=treename.split(".")
+##                #ExaBayes have the run and tree part inverted compared to mrbayes
+##                #here I assume that error happen only when there are more than one tree
+##                treename=".".join([".".join(treename[:-3]),treename[-2],treename[-3],treename[-1]])
+##                handle=open(treename,"r")                
             POS=place[part]["Tree"][1:-1].split("_pos")[-1]
             tfile[POS]={"file":handle,"curLine":None}
             while 1:
@@ -368,7 +379,7 @@ if __name__=="__main__":
     spiegazione=""" 
     -j jsonoutput
     -i nexus input
-    -p prefix
+    -p namerun
     -b burnin
     -s sample size 
     -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)
@@ -376,7 +387,6 @@ if __name__=="__main__":
     if len(com)<6:
         print spiegazione
     print com
-    assert ((not (com["-p"] and com["-i"])) and com["-m"]=="0")or (com["-m"]=="1" and ((com["-p"] and com["-i"])))
     output=com["-j"]
     JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])))
     JJstring=json.dumps(JJ, sort_keys=True,indent=4, separators=(',', ': '))
