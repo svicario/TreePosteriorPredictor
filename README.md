@@ -13,8 +13,8 @@ The project includes the following files:
 * README.md -- this file
 
 ## Dependency
-The project need the evolver program see README_PAML for details on this software
-The project was written in Python 2.7. backward compatibility but should span from 2.4 and on, but was not tested
+The project need the evolved program see README_PAML for details on this software.    
+The project was written in Python 2.7. backward compatibility but should span from 2.4 and on, but was not tested.    
 The following module were used:
 
 * [BioPython 1.60](http://biopython.org/)
@@ -54,9 +54,9 @@ __MrBayes example__
 
 __ExaBayes example__
 
-   cd example/exabayes
-   python ../../Jsonify.py   -j prova.json -i config.nex -p ExaBayes -b 10 -m 0 -s 10
-   python ../../PosteriorSimulator.py  -s prova.json -i aln.phy -f phylip
+    cd example/exabayes
+    python ../../Jsonify.py   -j prova.json -i config.nex -p ExaBayes -b 10 -m 0 -s 10
+    python ../../PosteriorSimulator.py  -s prova.json -i aln.phy -f phylip
 
 
   
