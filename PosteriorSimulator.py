@@ -38,7 +38,7 @@ from abglobin.nuc under the F3x4 table
 """
 
 InputAA="""
- 1        * 0: paml format (mc.paml); 1:paup format (mc.nex)
+ 2        * 0: paml format (mc.paml); 1:paup format (mc.nex)
 {random}       * random number seed (odd number)
 
 {nseq} {size} {rep}  * <# seqs>  <# sites>  <# replicates>
@@ -197,23 +197,23 @@ matrix_order={ "6":None, "7": {"CT":1,"TC":1,"AT":2,"TA":2,"TG":3,"GT":3,"CA":4,
 matrix_dict={"JC69":"0","JC":"0", "K80":"1", "F81":"2", "F84":"3", "HKY85":"4","HKY":"4", "T92":"5", "TN93":"6", "REV":"7","GTR":"7"}
 size_dict={"4by4":"4X4","doublet":"16X16","codon":"64X64"}
 ##protein model
-proteinModel_dict={"cpREV10":"cpREV10.dat",
+proteinModel_dict={"cprev10":"cpREV10.dat",
                    "dayhoff":"dayhoff.dat",
                    "lg":"lg.dat",
-                   "mtREV24":"mtREV24.dat",
-                   "cpREV64":"cpREV64.dat",
+                   "mtrev24":"mtREV24.dat",
+                   "cprev64":"cpREV64.dat",
                    "grantham":"grantham.dat",
                    "miyata":"miyata.dat",
                    "mtmama":"mtmam.dat",
-                   "vtMrBayes":"vtMrBayes.dat",
+                   "vt":"vtMrBayes.dat",
                    "mtzoa":"MtZoa.dat",
                    "jones-dcmut":"jones-dcmut.dat",
-                   "WAG":"wag.dat",
+                   "wag":"wag.dat",
                    "blosum":"blosumMrBayes.dat",
                    "dayhoff-dcmut":"dayhoff-dcmut.dat",
                    "jones":"jones.dat",
-                   "mtART":"mtArt.dat",
-                   "mtREV":"mtrev24MrBayes.dat"}
+                   "mtart":"mtArt.dat",
+                   "mrrev":"mtrev24MrBayes.dat"}
 
 #Reordering of parameters
 ##Reorder and normalize if necessary frequency of transition parameter and states
@@ -266,7 +266,9 @@ def ProteinFormat(PartitionJson):
         matrix_shape="1"
     else:
         matrix_shape="2"
-        matrix_file=proteinModel_dict[PartitionJson["matrix"]["shape"]]
+        #all model name are in lower case within the dict
+        path=os.path.dirname(os.path.realpath(__file__))+os.path.sep+"dat"+os.path.sep
+        matrix_file=path+proteinModel_dict[PartitionJson["matrix"]["shape"].lower()]
     aa_freq_2rows=""
     try:
         freq=PartitionJson["States"]["values"]
@@ -441,29 +443,33 @@ class simulatorMol:
                     M=InformPartitionJson(M,MSAspec[partition])
                 Param=GeneralFormat(M)
                 #Add model specific part
-                if M["type"]=="Protein":
-                    print ProteinFormat(M)
+                if M["type"].title()=="Protein":
+                    #print ProteinFormat(M)
                     Param.update(ProteinFormat(M))
                     EvolverInput=InputAA.format(**Param)
                     self.Nomefile="MCAA.dat"
+                    cmd='7\n0\n'
                 else:
                     if M["matrix"]["size"]=="4X4":
                         Param.update(NucleotideFormat(M))
                         EvolverInput=InputBase.format(**Param)
                         self.Nomefile="MCbase.dat"
+                        cmd='5\n0\n'
                     elif M["matrix"]["size"]=="64X64":
                         Param.update(CodonFormat(M))
                         EvolverInput=InputCodon.format(**Param)
                         self.Nomefile="MCcodon.dat"
+                        cmd='6\n0\n'
                     elif M["matrix"]["size"]=="16X16":
                         Param.update(DubletFormat(M))
                         MysteryInput=InputM.format(**Param)
-                        self.Nomefile="MCdoublet.dat"
+                        self.Nomefile="Mister"
+                        cmd="Mistery"
                 #write file and evolve it
                 handle=open(self.Nomefile,"w")
                 handle.write(EvolverInput)
                 handle.close()
-                self.evolve()
+                self.evolve(cmd)
                 #get scores
                 self.Complexity[-1].append(self.complexityEstimation(self.EvolverOutputFile))
                 #self.MI[-1].append(self.MIEstimation(self.EvolverOutputFile))
@@ -508,15 +514,16 @@ class simulatorMol:
         MeanScores=numpy.mean(self.Complexity,0)
         VarScores=numpy.var(self.Complexity,0)
         DevScores=numpy.mean((self.OriComplexity-self.Complexity)**2,0)
-        for pname,p,m,v,dev,obs,dist in zip(self.partitionOrder,Pscores,MeanScores,VarScores,DevScores,self.OriComplexity,list(self.Complexity.transpose())):
-            output+='\t<P description="Bollback statistics" dataset="'+pname+'">'+str(p)+'</P>\n'
-            output+='\t<meanE description="Mean Expected Value of MaxLikelihood" dataset="'+pname+'">'+str(m)+'</meanE >\n'
-            output+='\t<VarE description="Variance of MaxLikelihood" dataset="'+pname+'">'+str(v)+'</VarE >\n'
-            output+='\t<MSqDev description="Mean Square Deviation Expected from Observed" dataset="'+pname+'">'+str(dev)+'</MSqDev >\n'
-            output+='\t<Mobs description="Observed MaxLikelihood" dataset="'+pname+'">'+str(obs)+'</Mobs>\n'
-            Ls=(v+dev)**0.5
-            output+='\t<Ls description="Ibrahim statistics (square root of VarE+MSqDev)" dataset="All">'+str(Ls)+'</Ls>\n'
-            output+='\t<ExpDist description="Expected distribution" dataset="'+pname+'">'+",".join(map(str,dist))+'</ExpDist>\n'
+        if len(self.partitionOrder)>1:
+            for pname,p,m,v,dev,obs,dist in zip(self.partitionOrder,Pscores,MeanScores,VarScores,DevScores,self.OriComplexity,list(self.Complexity.transpose())):
+                output+='\t<P description="Bollback statistics" dataset="'+pname+'">'+str(p)+'</P>\n'
+                output+='\t<meanE description="Mean Expected Value of MaxLikelihood" dataset="'+pname+'">'+str(m)+'</meanE >\n'
+                output+='\t<VarE description="Variance of MaxLikelihood" dataset="'+pname+'">'+str(v)+'</VarE >\n'
+                output+='\t<MSqDev description="Mean Square Deviation Expected from Observed" dataset="'+pname+'">'+str(dev)+'</MSqDev >\n'
+                output+='\t<Mobs description="Observed MaxLikelihood" dataset="'+pname+'">'+str(obs)+'</Mobs>\n'
+                Ls=(v+dev)**0.5
+                output+='\t<Ls description="Ibrahim statistics (square root of VarE+MSqDev)" dataset="All">'+str(Ls)+'</Ls>\n'
+                output+='\t<ExpDist description="Expected distribution" dataset="'+pname+'">'+",".join(map(str,dist))+'</ExpDist>\n'
         output+='</res>\n'
         return output
             
@@ -546,8 +553,10 @@ def findThinning(nexusfilename, burnin, Exsampling):
     thinning=ngen/int(Exsampling)
     print samplefreq,ngen, Exsampling,
     return  thinning
+
 if __name__=="__main__":
-    com={"-e":"/Applications/BioApp/paml4.7a/src/evolver","-j":"prova.json"}
+    import os
+    com={"-j":"prova.json"}
     count=1
     key=None
     for i in sys.argv:
@@ -564,7 +573,8 @@ if __name__=="__main__":
     """
     if len(com)<4:
         print spiegazione
-
+    if not com.has_key("-e"):
+        com["-e"]=os.path.dirname(os.path.realpath(__file__))+os.path.sep+"evolver"
     S=simulatorMol(pathevolver=com["-e"])
     handle=open(com["-j"],"r")
     JJstring=handle.read()

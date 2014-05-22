@@ -1,4 +1,7 @@
 import json
+
+
+
 def GuessingModelfromHeader(Header,Model,partitionPlan,mrbayes=True):
     #dictionary matching json with mrbayes names
     sinonimi={'TL':'Tree','kappa':'matrix','r':'matrix','m':'mult','alpha':'gamma','pinvar':'pinv','pi':'States'}
@@ -30,11 +33,12 @@ def GuessingModelfromHeader(Header,Model,partitionPlan,mrbayes=True):
         place[partitionPlan_dict[p]]={"ngen":"@0@"}
         items=[[x,y[:y.find("{")]+y[y.find("}")+1:]] for x,y in enumerate(Header) if p in y[(y.find("{")+1):y.find("}")]]
         items+=[[x,y[:y.find("{")]+y[y.find("}")+1:]] for x,y in enumerate(Header) if "all" in y[(y.find("{")+1):y.find("}")]]
+        items+=[[x,y] for x,y in enumerate(Header) if y.find("{")==-1]
         #items=[[x,y[:y.find("{")]] for x,y in enumerate(Header) if p in y[y.find("{"):]]
         #items+=[[x,y[:y.find("{")]] for x,y in enumerate(Header) if "all" in y[y.find("{"):]]
         #loop across possible parameters accepted by json format
         for k in sinonimi:
-            k_items=[[x,y[len(k):]] for x,y in items if y.find(k)==0]
+            k_items=[[x,y[len(k):]] for x,y in items if (y.find(k)==0) and ( len(k)==len(y) or y.find("(")==len(k))]
             if k_items:
                 temp=place[partitionPlan_dict[p]]
                 #loop across pathway in the json for the value
@@ -64,92 +68,72 @@ def GuessingModelfromHeader(Header,Model,partitionPlan,mrbayes=True):
 
 def GettingInfoFromInput(NexusInput):
     shape_dict={"1":"JC","2":"HKY","6":"GTR"}
+    size_dict={"4by4":"4X4","doublet":"16X16","codon":"64X64"}
     "gettinginfo from mrbayes block in nexus"
     #Function assume that datatype is uniform! all DNA, all protein no mix
-    from Bio.Nexus.Nexus import Nexus
-    N=Nexus()
+    from Bio.Nexus import Nexus
+    N=Nexus.Nexus()
     N.read(NexusInput)
-    MBblock=[x for x in N.unknown_blocks if x.title.lower()=="mrbayes"][0]
-    #getting the number of runs
-    mcmcCMD=sum([x.split() for x in MBblock.commandlines[0] if x.find("mcmc")==0],[])
-    nruns=[int(y.split("=")[-1]) for y in mcmcCMD if y.find("nruns")==0][0]
-    #get the matrix size
-    lsetCMD=[x for x in MBblock.commandlines[0] if x.lower().find("lset")==0]
-    size=[y for y in " ".join(lsetCMD).split() if y.lower().find("nucmodel")==0]
-    if len(size)>0:
-        size=int(size[0].split("=")[-1])
-        size=size_dict[size]
-    else:
-        size="4X4"
-    #get charset information 
-    charsets=[" ".join(x.split()[1:])  for x in MBblock.commandlines[0] if x.lower().find("charset")==0]
-    ##make a clean dictionary
-    Charsets={}
-    for charset in charsets:
-        k,v=charset.split("=")
-        V=[]
-        for vv in v.split():
-            if vv.find("-"):
-                start,end=vv.split("-")
-                step=1
-                if end.find("\\")>-1:
-                    end,step=end.split("\\")
-                V+=range(int(start),int(end),int(step))
-            else:
-                try:
-                    #I assume it could be a single site
-                    vv=int(vv)
-                except ValueError:
-                    #it means that this portion of partition is not number but a reference to previously defined partition
-                    V+=Charsets[vv]
-                else:
-                    V.append(vv)
-        Charsets[k.strip()]=V
-    #get partition information
-    partitionPlan=[" ".join(x.split()[1:])  for x in MBblock.commandlines[0] if x.lower().find("partition")==0][0]
-    ##make a clean list
-    partitionPlan=[x.strip() for x in partitionPlan.split(":")[-1].split(",")]
-    #print charsets, partitionPlan
+    #merging togheter all possible mrbayes block present in the file as a long list of command
+    #should I take only the first one?
+    cmdblock=sum([sum(x.commandlines,[]) for x in N.unknown_blocks if x.title.lower()=="mrbayes"],[])
+    HyppartitionPlan={}
+    partitionPlan=["dummy"]
     
-
-    from Bio.Nexus.Nexus import _compact4nexus
+    for cmdline in cmdblock:
+        CMDline=Nexus.Commandline(cmdline,"mrbayes")
+        if CMDline.command=="charset":
+            N._charset(CMDline.options)
+        elif CMDline.command=="partition":
+            nameplan=cmdline.split("=")[0].split()[1]
+            HyppartitionPlan[nameplan]=[x.strip() for x in cmdline.split(":")[-1].split(",")]
+        elif CMDline.command.find("mcmc")>-1:
+            try:
+                nruns=CMDline.options["nruns"]
+            except KeyError:
+                pass
+        elif CMDline.command=="set":
+            if CMDline.options.has_key("partition"): 
+                partitionPlan=HyppartitionPlan[CMDline.options["partition"]]
+    print cmdblock
+    print partitionPlan
     Model={}
     counter=1
     for partition in partitionPlan:
-        Model[partition]={"ntaxa":N.ntax,"type":N.datatype,"matrix":{"size":size}}
-        if N.datatype.lower()=="dna":
-            lsetCMDpart=lsetCMD
-            if len(partitionPlan)>1:
-                # find lset cmd that refer to correct partition
-                #lsetCMD=[x for x in lsetCMD if x(x.find("applyto")>-1)&(counter in map(int,x[:-1].split("{")[-1].split(",")))]
-                lsetCMDpart=[]
-                for l in lsetCMD:
-                    for ll in l.split():
-                        if (ll.find("applyto")>-1):
-                            ll=ll.strip().split("(")[-1][:-1]
-                            if ll=="all":
-                                lsetCMDpart.append(l)
-                                break                                
-                            elif counter in map(int,ll.split(",")) :
-                                lsetCMDpart.append(l)
-                                break
-            print lsetCMDpart
-            shape=[y.split("=")[-1].strip() for y in "".join(lsetCMDpart).split() if y.lower().find("nst")==0]
-            shape=shape_dict[shape[0]]
-        if N.datatype.lower()=="protein":
-            prsetCMD=[x for x in MBblock.commandlines[0] if x.lower().find("prset")>-1]
-            if len(partitionPlan)>1:
-                prsetCMD=[x for x in prsetCMD if (x.find("applyto")>-1)&(counter in map(int,x[:-1].split("{")[-1].split(",")))]
-            shape=[y for y in prsetCMD if y.lower().find("aamodelpr")==0]
-            shape=shape[0]
-            if shape.find("fixed")>-1:
-                shape=shape.strip()[5:-1]
-        Model[partition]["matrix"]["shape"]=shape
-        Model[partition]["partitionSize"]=len(Charsets[partition])
-        #this because compact think that number start from zero
-        Model[partition]["partitionRange"]=_compact4nexus([x-1 for x in Charsets[partition]])
-        counter+=1
-    return Model,partitionPlan, nruns
+        Model[partition]={"ntaxa":N.ntax,"type":N.datatype.lower().title(),"matrix":{}}
+        Model[partition]["partitionSize"]=len(N.charsets[partition])
+        Model[partition]["partitionRange"]=Nexus._compact4nexus(N.charsets[partition])
+        for cmdline in cmdblock:
+            CMDline=Nexus.Commandline(cmdline,"mrbayes")
+            if N.datatype.lower()=="dna":
+                if CMDline.command=="lset":
+                    test1=test2=test3=False
+                    if CMDline.options.has_key("applyto"):
+                        APP=CMDline.options["applyto"][1:-1].lower()
+                        if (APP.strip()=="all"):
+                            test2=True
+                        elif counter in map(int,APP.split(",")):
+                            test3=True
+                    else:
+                        test1=True
+                    if test1 or test2 or test3:
+                        Model[partition]["matrix"]["shape"]=shape_dict[CMDline.options["nst"]]
+                        if CMDline.options.has_key("nucmodel"):
+                            Model[partition]["matrix"]["size"]=size_dict(CMDline.options["nucmodel"])
+                        else:
+                            Model[partition]["matrix"]["size"]="4X4"
+            if N.datatype.lower()=="protein":
+                Model[partition]["matrix"]["size"]="20X20"
+                if CMDline.command=="prset":
+                    mod=CMDline.options["aamodelpr"]
+                    if mod.find("fix")>-1:
+                       Model[partition]["matrix"]["shape"]=mod[(mod.find("(")+1):(mod.find(")")-1)]
+                    elif mod.find("(")==-1:
+                       Model[partition]["matrix"]["shape"]=mod 
+
+        counter+=1    
+
+    return Model,partitionPlan, int(nruns)
 
 def GettingInfoFromInputExa(prefix):
     ##Getting all files that we need
@@ -379,7 +363,6 @@ if __name__=="__main__":
     -p prefix
     -b burnin
     -s sample size 
-    -P partitionfile [only for exabayes]
     -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)
     """
     if len(com)<6:
@@ -387,9 +370,8 @@ if __name__=="__main__":
     print com
     output=com["-j"]
     NexusInput=com["-i"]
-    
     JJ=MrBayes2Json(NexusInput, prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])))
-    JJstring=json.dumps(JJ)
+    JJstring=json.dumps(JJ, sort_keys=True,indent=4, separators=(',', ': '))
     handle=open(output,"w")
     handle.write(JJstring)
     handle.close()
