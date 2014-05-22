@@ -45,7 +45,18 @@ There are the following options:
     -i input MSA
     -f input MSA format (all format accepted by biopython)
 
+##Example of use 
+__MrBayes example__
 
+    cd example/mrbayes
+    python  ../../Jsonify.py -j prova.json -i Limenitidinae6.nex -p Limenitidinae6.nex -b 0 -s 100 -m 1
+    python ../../PosteriorSimulator.py -s prova.json -i Limenitidinae6.nex -f nexus
+
+__ExaBayes example__
+
+   cd example/exabayes
+   python ../../Jsonify.py   -j prova.json -i config.nex -p ExaBayes -b 10 -m 0 -s 10
+   python ../../PosteriorSimulator.py  -s prova.json -i aln.phy -f phylip
 
 
   
