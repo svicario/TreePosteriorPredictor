@@ -31,14 +31,25 @@ def GuessingModelfromHeader(Header,Model,partitionPlan,mrbayes=True):
     #loop across partitions
     for p in partitions:
         place[partitionPlan_dict[p]]={"ngen":"@0@"}
-        items=[[x,y[:y.find("{")]+y[y.find("}")+1:]] for x,y in enumerate(Header) if p in y[(y.find("{")+1):y.find("}")]]
-        items+=[[x,y[:y.find("{")]+y[y.find("}")+1:]] for x,y in enumerate(Header) if "all" in y[(y.find("{")+1):y.find("}")]]
-        items+=[[x,y] for x,y in enumerate(Header) if y.find("{")==-1]
-        #items=[[x,y[:y.find("{")]] for x,y in enumerate(Header) if p in y[y.find("{"):]]
-        #items+=[[x,y[:y.find("{")]] for x,y in enumerate(Header) if "all" in y[y.find("{"):]]
+        items=[]
+        for x,y in enumerate(Header):
+            base=y[(y.find("{")+1):y.find("}")]
+            if base=="":
+                items.append([x,y])
+            base=base.split(",")
+            for b in base:
+                if b.find("-")>-1:
+                    start,end=map(int,b.split("-"))
+                    b=map(str,range(start,end+1))
+                else:
+                    b=[b]
+                for bb in b:
+                    if b=="all" or bb==p:
+                        items.append([x,y[:y.find("{")]+y[y.find("}")+1:]])
         #loop across possible parameters accepted by json format
         for k in sinonimi:
             k_items=[[x,y[len(k):]] for x,y in items if (y.find(k)==0) and ( len(k)==len(y) or y.find("(")==len(k))]
+            #print k,k_items
             if k_items:
                 temp=place[partitionPlan_dict[p]]
                 #loop across pathway in the json for the value
@@ -100,8 +111,8 @@ def GettingInfoFromInput(NexusInput):
         elif CMDline.command=="set":
             if CMDline.options.has_key("partition"): 
                 partitionPlan=HyppartitionPlan[CMDline.options["partition"]]
-    print cmdblock
-    print partitionPlan
+    #print cmdblock
+    #print partitionPlan
     Model={}
     counter=1
     for partition in partitionPlan:
@@ -143,6 +154,7 @@ def GettingInfoFromInput(NexusInput):
 def GettingInfoFromInputExa(prefix):
     ##Getting all files that we need
     import os
+    from Bio import AlignIO
     ll=os.listdir("./")
     #I assume that there are only one info file
     info=[x for x in ll if x.lower().find("exabayes_info."+prefix.lower())>-1][0]
@@ -179,7 +191,8 @@ def GettingInfoFromInputExa(prefix):
 
     Model={}
     for p in partitionPlan:
-        infopart=[x for x in RRR if x[1]==p][0]
+        if files.has_key("-q"):
+            infopart=[x for x in RRR if x[1]==p][0]
         if infopart[0].upper()=="DNA":
             datatype="DNA"
             size="4X4"
@@ -283,9 +296,9 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
             phandle=open(prefix+".run"+str(p)+".p","r")
         except IOError:
             try:
-                phandle=open("Exabayes_parameters."+prefix+"."+str(p)+".p","r")
+                phandle=open("ExaBayes_parameters."+prefix+"."+str(p),"r")
             except IOError:
-                phandle=open("Exabayes.run"+str(p)+".p","r")
+                phandle=open("ExaBayes.run"+str(p)+".p","r")
         while 1:
             line=phandle.readline()
             if line.find("Gen")==0: break
@@ -296,9 +309,13 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
         ngen=len(f)
         phandle.seek(startpos)
         ngen=ngen-int(burnin)
-        step=ngen/int(sample)
+        step=round(ngen/int(sample))
+        if step==0:
+            step=1
+        print step
         tfile={}
         for part in place:
+            #print p,part, place[part]
             place[part]["Tree"]=place[part]["Tree"].format(nrun=p, prefix=prefix)
             handle=open(place[part]["Tree"][1:-1].split("_pos")[0],"r")
 ##            try:
@@ -318,7 +335,7 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
                     break
                 bitpos=tfile[POS]["file"].tell()
             tfile[POS]["file"].seek(bitpos)
-        print tfile.keys()
+        #print tfile.keys()
         placeString=json.dumps(place)
         placeString=re.split('"*@"*',placeString)
         #Burningout the  Burnin
