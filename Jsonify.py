@@ -135,14 +135,14 @@ def GettingInfoFromInput(NexusInput):
 
     return Model,partitionPlan, int(nruns)
 
-def GettingInfoFromInputExa(prefix):
+def GettingInfoFromInputExa():
     ##Getting all files that we need
     import os
     ll=os.listdir("./")
     #I assume that there are only one info file
-    info=[x for x in ll if x.find(prefix+"_info")>-1][0]
+    info=[x for x in ll if x.lower().find("exabayes_info")>-1][0]
     handle=open(info,"r")
-    print "w",info
+    print "InfoFile",info
     RR=handle.readlines()
     pos=[x for x,y in enumerate(RR) if y.find("ExaBayes was called as follows:")>-1][0]
     call=RR[pos+1]
@@ -156,16 +156,22 @@ def GettingInfoFromInputExa(prefix):
         if i[0]=="-":
             key=i
     print files
-    partfile=files["-q"]
     NexusInput=files["-c"]
     MSA=files["-f"]
-    ##Parsing partfile
-    handle=open(partfile,"r")
-    R=handle.readlines()
-    handle.close()
-    RR=[x.strip().split(",") for x in R]
-    RRR=[x[:1]+x[1].split("=") for x in RR]
-    partitionPlan=zip(*RRR)[1]
+    if files.has_key("-q"):
+        ##Parsing partfile
+        partfile=files["-q"]
+        handle=open(partfile,"r")
+        R=handle.readlines()
+        handle.close()
+        RR=[x.strip().split(",") for x in R]
+        RRR=[x[:1]+x[1].split("=") for x in RR]
+        partitionPlan=zip(*RRR)[1]
+    else:
+        partitionPlan=["dummy"]
+        a=AlignIO.read(MSA,"phylip")
+        infopart=[files["-m"],"dummy","1-"+str(len(a))]
+
     Model={}
     for p in partitionPlan:
         infopart=[x for x in RRR if x[1]==p][0]
@@ -261,7 +267,9 @@ def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
         Model,partitionPlan,nruns=GettingInfoFromInput(NexusInput)
     else:
         print "I assume it is ExaBayes"
-        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix)
+        Model,partitionPlan,nruns=GettingInfoFromInputExa()
+        if not prefix:
+            prefix="ExaBayes"
     JSONone={"FixedParameters":Model,"VariableParameters":[]}
     for p in range(nruns):
         if mrbayes:
@@ -348,7 +356,7 @@ def findThinning(ngen, burnin, Exsampling):
 
 if __name__=="__main__":
     import sys
-    com={"-P":None,"-j":"prova.json"}
+    com={"-i":None,"-p":None,"-j":"prova.json"}
     count=1
     key=None
     for i in sys.argv:
@@ -368,9 +376,9 @@ if __name__=="__main__":
     if len(com)<6:
         print spiegazione
     print com
+    assert ((not (com["-p"] and com["-i"])) and com["-m"]=="0")or (com["-m"]=="1" and ((com["-p"] and com["-i"])))
     output=com["-j"]
-    NexusInput=com["-i"]
-    JJ=MrBayes2Json(NexusInput, prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])))
+    JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])))
     JJstring=json.dumps(JJ, sort_keys=True,indent=4, separators=(',', ': '))
     handle=open(output,"w")
     handle.write(JJstring)

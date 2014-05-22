@@ -237,7 +237,7 @@ def StatesValue_reformat(values,names,size):
 def GeneralFormat(PartitionJson):
     """parameters present in all model for all data types"""
     R=1+int(random()*200000)/2
-    rep=1
+    rep=PartitionJson["replicates"]
     size=PartitionJson["partitionSize"]
     nseq=PartitionJson["ntaxa"]
     try:
@@ -422,7 +422,7 @@ class simulatorMol:
         comfile.write(cmd)
         comfile.close()
         os.popen(self.path+' < RR')
-    def ReadingJson(self,Json):
+    def ReadingJson(self,Json, rep=1):
         import numpy
         PosteriorInfo=json.loads(Json)
         Posterior=PosteriorInfo["VariableParameters"]
@@ -441,6 +441,7 @@ class simulatorMol:
                 #inform json with general parameters if necessary
                 if MSAspec:
                     M=InformPartitionJson(M,MSAspec[partition])
+                M["replicates"]=str(rep)
                 Param=GeneralFormat(M)
                 #Add model specific part
                 if M["type"].title()=="Protein":
@@ -570,6 +571,7 @@ if __name__=="__main__":
     -e path to simulator evolver
     -i input MSA
     -f input MSA format
+    -r how many times each model need to be used for simulation
     """
     if len(com)<4:
         print spiegazione
