@@ -237,7 +237,7 @@ def StatesValue_reformat(values,names,size):
 def GeneralFormat(PartitionJson):
     """parameters present in all model for all data types"""
     R=1+int(random()*200000)/2
-    rep=PartitionJson["replicates"]
+    rep=1
     size=PartitionJson["partitionSize"]
     nseq=PartitionJson["ntaxa"]
     try:
@@ -375,12 +375,15 @@ class simulatorMol:
     def MIEstimation(self,nomefile):
         from Bio import AlignIO
         from utility import Table
-        alignobj=AlignIO.read(nomefile,"nexus")
+        if nomefile.__class__=="".__class__:
+            alignobj=AlignIO.read(nomefile,"nexus")
+        else:
+            alignobj=nomefile
         import itertools
         dna = ['A','T','C','G']
         dna=[x.lower() for x in dna]
         cases = [''.join(x) for x in itertools.product(dna, repeat=2)]
-        alignlist=alignobj._records
+        alignlist=[seq.lower() for seq in alignobj._records]
         Pi=[]
         for seq in alignlist:
             tmp = Table(seq, cases=dna)
@@ -403,16 +406,10 @@ class simulatorMol:
                 for pat in pattern.keys():
                     bi,bj=pat
                     cpat=pattern[pat]/l
-                    if cpat==0:
-                        #print i,j, pat, cpat
-                        continue
-                    #print Pi[i][bi]
-                    #print Pi[j][bj], pattern[pat]/l
-                    #print (pattern[pat]/l)/((Pi[i][bi])*(Pi[j][bj]))
-                    MI+=cpat*numpy.log((cpat)/((Pi[i][bi])*(Pi[j][bj])))
-                    #print pattern[pat], Pi[i][bi], Pi[j][bj], l
+                    if cpat!=0:
+                        MI+=cpat*numpy.log((cpat)/((Pi[i][bi])*(Pi[j][bj])))
                 MutualInfo.append(MI)
-                names.append((i+1,j+1))
+                names.append((i,j))
         
         return MutualInfo, names
 
@@ -422,7 +419,7 @@ class simulatorMol:
         comfile.write(cmd)
         comfile.close()
         os.popen(self.path+' < RR')
-    def ReadingJson(self,Json, rep=1):
+    def ReadingJson(self,Json):
         import numpy
         PosteriorInfo=json.loads(Json)
         Posterior=PosteriorInfo["VariableParameters"]
@@ -441,7 +438,6 @@ class simulatorMol:
                 #inform json with general parameters if necessary
                 if MSAspec:
                     M=InformPartitionJson(M,MSAspec[partition])
-                M["replicates"]=str(rep)
                 Param=GeneralFormat(M)
                 #Add model specific part
                 if M["type"].title()=="Protein":
@@ -473,12 +469,13 @@ class simulatorMol:
                 self.evolve(cmd)
                 #get scores
                 self.Complexity[-1].append(self.complexityEstimation(self.EvolverOutputFile))
-                #self.MI[-1].append(self.MIEstimation(self.EvolverOutputFile))
+                #self.MI[-1].append(self.MIEstimation(self.EvolverOutputFile)[0])
     def FinalScore(self, OriMSAfile, formatfile="nexus"):
         from Bio import AlignIO
         from Bio.Alphabet import DNAAlphabet
         oriMSA=AlignIO.read(OriMSAfile, formatfile)
         self.OriComplexity=[]
+        #self.OriMI=[]
         for part in self.partitionOrder:
             r=self.CurPartitioning[part]['partitionRange']
             r=[y[:1]+y[1].split("\\") for y in [x.split("-") for x in r.split()]]
@@ -494,9 +491,17 @@ class simulatorMol:
             MSAslices=[oriMSA[:,x:(x+1)] for x in range(len(oriMSA._records[0])) if x in sites]
             MSA=sum(MSAslices[1:],MSAslices[0])
             self.OriComplexity.append(self.complexityEstimation(MSA))
+            #self.OriMI.append(self.MIEstimation(MSA))
+        
+        #getting realized number of replicates this is about sample*nruns but given rounding of step could change
+        L=float(len(self.Complexity))
+        #mexp=array(S.MI)
+        #m=array([x[0] for x in S.OriMI])
+        #nomim=S.OriMI[0][1]
+        #Pmi=numpy.sum((mexp>m),0)/L
         self.Complexity=numpy.array(self.Complexity)
         self.OriComplexity=numpy.array(self.OriComplexity)
-        L=float(len(self.Complexity))
+        
         
         Pscore=sum(numpy.sum(self.Complexity,1)>sum(self.OriComplexity))/L
         Score=numpy.sum(self.Complexity,1)
@@ -571,7 +576,6 @@ if __name__=="__main__":
     -e path to simulator evolver
     -i input MSA
     -f input MSA format
-    -r how many times each model need to be used for simulation
     """
     if len(com)<4:
         print spiegazione

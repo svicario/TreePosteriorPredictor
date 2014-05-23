@@ -151,7 +151,7 @@ def GettingInfoFromInput(NexusInput):
 
     return Model,partitionPlan, int(nruns)
 
-def GettingInfoFromInputExa(prefix):
+def GettingInfoFromInputExa(prefix, aln):
     ##Getting all files that we need
     import os
     from Bio import AlignIO
@@ -172,6 +172,8 @@ def GettingInfoFromInputExa(prefix):
             key=None
         if i[0]=="-":
             key=i
+    if aln:
+        files["-f"]=aln
     print files
     NexusInput=files["-c"]
     MSA=files["-f"]
@@ -279,13 +281,13 @@ def GettingInfoFromInputExa(prefix):
             
         
     
-def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True):
+def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True, aln=None):
     import json, re
     if mrbayes:
         Model,partitionPlan,nruns=GettingInfoFromInput(NexusInput)
     else:
         print "I assume it is ExaBayes"
-        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix)
+        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix, aln)
         if not prefix:
             prefix="ExaBayes"
     JSONone={"FixedParameters":Model,"VariableParameters":[]}
@@ -396,6 +398,7 @@ if __name__=="__main__":
     spiegazione=""" 
     -j jsonoutput
     -i nexus input
+    -a alignment in phylip format (for exabayes in case the exabayes call was done using binary alignment)
     -p namerun
     -b burnin
     -s sample size 
@@ -405,7 +408,7 @@ if __name__=="__main__":
         print spiegazione
     print com
     output=com["-j"]
-    JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])))
+    JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])), aln=com["-a"])
     JJstring=json.dumps(JJ, sort_keys=True,indent=4, separators=(',', ': '))
     handle=open(output,"w")
     handle.write(JJstring)

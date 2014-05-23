@@ -25,11 +25,13 @@ There are 6 inputs that need to be passed using the unix cmd line style
 here the details:
 
     -j jsonoutput
-    -i nexus input (only for mrbayes)
-    -p prefix (only for mrbayes)
+    -i nexus input
+    -a alignment in phylip format (for exabayes in case the exabayes call was done using binary alignment)
+    -p namerun
     -b burnin
     -s sample size 
-    -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)   
+    -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)
+
 ###Limitation of Jsonify
 The program correctly represent partitioned model in which one type of data (DNA, Protein or Codon) is present in the multiple sequences alignment (MSA). MSA with mixed type may not correctly represented.
 
@@ -44,6 +46,7 @@ There are the following options:
     -e path to  evolver
     -i input MSA
     -f input MSA format (all format accepted by biopython)
+    -a 
 
 ##Example of use 
 __MrBayes example__
@@ -55,7 +58,7 @@ __MrBayes example__
 __ExaBayes example__
 
     cd example/exabayes
-    python ../../Jsonify.py   -j prova.json -b 10 -m 0 -s 10
+    python ../../Jsonify.py   -j prova.json -b 10 -m 0 -s 10 -p myRun
     python ../../PosteriorSimulator.py  -s prova.json -i aln.phy -f phylip
 
 
