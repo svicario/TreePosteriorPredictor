@@ -151,7 +151,7 @@ def GettingInfoFromInput(NexusInput):
 
     return Model,partitionPlan, int(nruns)
 
-def GettingInfoFromInputExa(prefix, aln):
+def GettingInfoFromInputExa(prefix, aln, datatype):
     ##Getting all files that we need
     import os
     from Bio import AlignIO
