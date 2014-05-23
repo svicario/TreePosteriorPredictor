@@ -46,7 +46,6 @@ There are the following options:
     -e path to  evolver
     -i input MSA
     -f input MSA format (all format accepted by biopython)
-    -a 
 
 ##Example of use 
 __MrBayes example__

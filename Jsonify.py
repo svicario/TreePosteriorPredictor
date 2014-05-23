@@ -174,6 +174,8 @@ def GettingInfoFromInputExa(prefix, aln):
             key=i
     if aln:
         files["-f"]=aln
+        if datatype:
+            files["-m"]=datatype
     print files
     NexusInput=files["-c"]
     MSA=files["-f"]
@@ -281,13 +283,13 @@ def GettingInfoFromInputExa(prefix, aln):
             
         
     
-def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True, aln=None):
+def MrBayes2Json(NexusInput, prefix, burnin, sample, mrbayes=True, aln=None, datatype=None):
     import json, re
     if mrbayes:
         Model,partitionPlan,nruns=GettingInfoFromInput(NexusInput)
     else:
         print "I assume it is ExaBayes"
-        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix, aln)
+        Model,partitionPlan,nruns=GettingInfoFromInputExa(prefix, aln,datatype)
         if not prefix:
             prefix="ExaBayes"
     JSONone={"FixedParameters":Model,"VariableParameters":[]}
@@ -386,7 +388,7 @@ def findThinning(ngen, burnin, Exsampling):
 
 if __name__=="__main__":
     import sys
-    com={"-i":None,"-p":None,"-j":"prova.json"}
+    com={"-i":None,"-p":None,"-j":"prova.json", "-d":None}
     count=1
     key=None
     for i in sys.argv:
@@ -398,17 +400,18 @@ if __name__=="__main__":
     spiegazione=""" 
     -j jsonoutput
     -i nexus input
-    -a alignment in phylip format (for exabayes in case the exabayes call was done using binary alignment)
     -p namerun
     -b burnin
     -s sample size 
     -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)
+    -a alignment in phylip format (for exabayes in case the exabayes call was done using binary alignment)
+    -d data type only two values are possible (PROT and DNA) (the option is valid only  when option -a is used )
     """
     if len(com)<6:
         print spiegazione
     print com
     output=com["-j"]
-    JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])), aln=com["-a"])
+    JJ=MrBayes2Json(NexusInput=com["-i"], prefix=com["-p"], burnin=int(com["-b"]), sample=int(com["-s"]), mrbayes=bool(int(com["-m"])), aln=com["-a"], datatype=com["-d"])
     JJstring=json.dumps(JJ, sort_keys=True,indent=4, separators=(',', ': '))
     handle=open(output,"w")
     handle.write(JJstring)
