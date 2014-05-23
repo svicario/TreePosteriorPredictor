@@ -60,5 +60,9 @@ __ExaBayes example__
     python ../../Jsonify.py   -j prova.json -b 10 -m 0 -s 10 -p myRun
     python ../../PosteriorSimulator.py  -s prova.json -i aln.phy -f phylip
 
+in case of use of binary alignment to inform jsnoify is possible to use also the option -a and -d. This option override the alignment file definition  within the file Exabayes_info.myRun.
+
+    python ../../Jsonify.py   -j prova.json -b 10 -m 0 -s 10 -p myRun -a aln.phy -d DNA
+
 
   
