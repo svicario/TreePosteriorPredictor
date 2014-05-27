@@ -170,6 +170,21 @@ def transpose(m):
             return tuple(map(list, zip(*m)))
         else:
             return tuple( zip(*m) )
+def Table(x,cases=[]):
+    table={}
+    for case in cases:
+        table[case]=0
+    if len(cases)!=0:
+        table['NA']=0
+    for obs in x:
+        if table.has_key(obs):
+            table[obs]+=1
+        else:
+            if not cases:
+                table[obs]=1
+            else:
+                table['NA']+=1
+    return table
 
 import sys
 from  random import random
@@ -335,7 +350,6 @@ class simulatorMol:
         self.CurPartitioning=None
     def complexityEstimation(self,nomefile="mc.paml"):
         from math import log
-        from utility import Table
         from Bio import AlignIO
         if nomefile.__class__=="".__class__:
             A=AlignIO.read(nomefile,"nexus")
@@ -374,7 +388,6 @@ class simulatorMol:
             
     def MIEstimation(self,nomefile):
         from Bio import AlignIO
-        from utility import Table
         if nomefile.__class__=="".__class__:
             alignobj=AlignIO.read(nomefile,"nexus")
         else:
