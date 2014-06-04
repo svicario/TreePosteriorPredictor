@@ -66,7 +66,6 @@ in case of use of binary alignment to inform jsnoify is possible to use also the
 
     python ../../Jsonify.py   -j prova.json -b 10 -m 0 -s 10 -p myRun -a aln.phy -d DNA
 
-##Example of deployment##
-The script is exposed within a [webservice](https://www.biodiversitycatalogue.org/rest_methods/116)
+
 
   
