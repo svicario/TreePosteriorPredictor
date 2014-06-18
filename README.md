@@ -1,4 +1,4 @@
-![image](http://testjst.ba.infn.it/openacces/InputExamples/2beMoved2ITB/TPPlogo.png = 100X100)
+![image](http://testjst.ba.infn.it/openacces/InputExamples/2beMoved2ITB/TPPlogo.png)
 
 TreePosteriorPredictor
 =============
