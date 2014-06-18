@@ -1,7 +1,7 @@
 ![image](http://testjst.ba.infn.it/openacces/InputExamples/2beMoved2ITB/TPPlogo.png)
 
 TreePosteriorPredictor
-=============
+=====================
 
 Perform a Posterior Predictive test to validate phylogenetic inference done with MrBayes and ExaBayes
 
