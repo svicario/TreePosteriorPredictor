@@ -22,7 +22,7 @@ The following module were used:
 * [BioPython 1.60](http://biopython.org/)
 * [Numpy 1.8](http://www.numpy.org/)
 
-##Jsonify
+## Jsonify
 There are 6 inputs that need to be passed using the unix cmd line style
 here the details:
 
@@ -34,14 +34,14 @@ here the details:
     -s sample size 
     -m boolean 0 or 1 the input is mrbayes (otherwise exabayes)
 
-###Limitation of Jsonify
+### Limitation of Jsonify
 The program correctly represent partitioned model in which one type of data (DNA, Protein or Codon) is present in the multiple sequences alignment (MSA). MSA with mixed type may not correctly represented.
 
 At the moment protein model with fixed parameters are represented with a common name in the field "shape" within the "matrix" section. Future version will spell out actual value of all parameters to avoid name ambiguity
 
 The program do not represent model with parameters changing value across the tree
 
-##PosteriorSimulator
+## PosteriorSimulator
 There are the following options:
 
     -j jsoninput path
@@ -49,7 +49,7 @@ There are the following options:
     -i input MSA
     -f input MSA format (all format accepted by biopython)
 
-##Example of use 
+## Example of use 
 __MrBayes example__
 
     cd example/mrbayes
